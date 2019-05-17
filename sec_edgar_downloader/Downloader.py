@@ -92,7 +92,7 @@ class Downloader:
                                 f.write(chunk)
                     # to save disk space. we will zip the file.
                     with open(save_path, 'rb') as f_in:
-                        with gzip.open(f'{save_path}.gz', 'wb') as f_out:
+                        with gzip.open(f'{save_path}.gz', 'wb', compresslevel=9) as f_out:
                             shutil.copyfileobj(f_in, f_out)
                     os.remove(save_path)
 
