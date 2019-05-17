@@ -9,10 +9,12 @@ FilingInfo = namedtuple("FilingInfo", ["filename", "url"])
 
 
 class Downloader:
-    def __init__(self, download_folder=Path.home().joinpath("Downloads")):
+    def __init__(self, download_folder=Path.home().joinpath("Downloads"), proxyFactory = None):
         print("Welcome to the SEC EDGAR Downloader!")
 
         self._download_folder = Path(download_folder)
+        self._proxyFactory = proxyFactory
+        self._proxies = self._get_new_proxy()
 
         if not self._download_folder.exists():
             raise IOError(f"The folder for saving company filings ({self._download_folder}) does not exist.")
@@ -33,54 +35,63 @@ class Downloader:
         return f"{self._base_url}&CIK={ticker}&type={filing_type.replace(' ', '+')}&dateb={before_date}"
 
     def _download_filings(self, edgar_search_url, filing_type, ticker, num_filings_to_download):
-        resp = requests.get(edgar_search_url)
-        resp.raise_for_status()
-        edgar_results_html = resp.content
+        retry_times = 0
+        while(retry_times < 3):
+            try:
+                resp = requests.get(edgar_search_url, proxies = self._proxies)
+                resp.raise_for_status()
+                edgar_results_html = resp.content
 
-        edgar_results_scraper = BeautifulSoup(edgar_results_html, "lxml")
+                edgar_results_scraper = BeautifulSoup(edgar_results_html, "lxml")
 
-        document_anchor_elements = edgar_results_scraper.find_all(
-            id="documentsbutton", href=True)[:num_filings_to_download]
+                document_anchor_elements = edgar_results_scraper.find_all(
+                    id="documentsbutton", href=True)[:num_filings_to_download]
 
-        sec_base_url = "https://www.sec.gov"
-        filing_document_info = []
-        for anchor_element in document_anchor_elements:
-            filing_detail_url = f"{sec_base_url}{anchor_element['href']}"
-            # Some entries end with .html, some end with .htm
-            if filing_detail_url[-1] != "l":
-                filing_detail_url += "l"
-            full_filing_url = filing_detail_url.replace("-index.html", ".txt")
-            name = full_filing_url.split("/")[-1]
-            filing_document_info.append(FilingInfo(filename=name, url=full_filing_url))
+                sec_base_url = "https://www.sec.gov"
+                filing_document_info = []
+                for anchor_element in document_anchor_elements:
+                    filing_detail_url = f"{sec_base_url}{anchor_element['href']}"
+                    # Some entries end with .html, some end with .htm
+                    if filing_detail_url[-1] != "l":
+                        filing_detail_url += "l"
+                    full_filing_url = filing_detail_url.replace("-index.html", ".txt")
+                    name = full_filing_url.split("/")[-1]
+                    filing_document_info.append(FilingInfo(filename=name, url=full_filing_url))
 
-        # number of filings available may be less than the number requested
-        num_filings_to_download = len(filing_document_info)
+                # number of filings available may be less than the number requested
+                num_filings_to_download = len(filing_document_info)
 
-        if num_filings_to_download == 0:
-            print(f"No {filing_type} documents available for {ticker}.")
-            return 0
+                if num_filings_to_download == 0:
+                    print(f"No {filing_type} documents available for {ticker}.")
+                    return 0
 
-        print(f"{num_filings_to_download} {filing_type} documents available for {ticker}. Beginning download...")
+                print(f"{num_filings_to_download} {filing_type} documents available for {ticker}. Beginning download...")
 
-        for doc_info in filing_document_info:
-            resp = requests.get(doc_info.url, stream=True)
-            resp.raise_for_status()
+                for doc_info in filing_document_info:
+                    resp = requests.get(doc_info.url, stream=True, proxies = self._proxies)
+                    resp.raise_for_status()
 
-            save_path = self._download_folder.joinpath("sec_edgar_filings", ticker, filing_type, doc_info.filename)
+                    save_path = self._download_folder.joinpath("sec_edgar_filings", ticker, filing_type, doc_info.filename)
 
-            # Create all parent directories as needed. For example, if we have the
-            # directory /hello and we want to create /hello/world/my/name/is/bob.txt,
-            # this would create all the directories leading up to bob.txt.
-            save_path.parent.mkdir(parents=True, exist_ok=True)
+                    # Create all parent directories as needed. For example, if we have the
+                    # directory /hello and we want to create /hello/world/my/name/is/bob.txt,
+                    # this would create all the directories leading up to bob.txt.
+                    save_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(save_path, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=1024):
-                    if chunk:  # filter out keep-alive chunks
-                        f.write(chunk)
+                    with open(save_path, "wb") as f:
+                        for chunk in resp.iter_content(chunk_size=1024):
+                            if chunk:  # filter out keep-alive chunks
+                                f.write(chunk)
 
-        print(f"{filing_type} filings for {ticker} downloaded successfully.")
-
-        return num_filings_to_download
+                print(f"{filing_type} filings for {ticker} downloaded successfully.")
+                return num_filings_to_download
+            except requests.HTTPError as e:
+                if(e.response.status_code == 429):
+                    print(f" retry {retry_times} times, Server blocked us since we visited to much, we try to get new proxy.")
+                    self._proxies = self._get_new_proxy()
+                    retry_times += 1
+        print(f"max {retry_times} retry failed.")
+        return 0
 
     def _get_filing_wrapper(self, filing_type, ticker_or_cik, num_filings_to_download):
         num_filings_to_download = int(num_filings_to_download)
@@ -91,6 +102,8 @@ class Downloader:
         filing_url = self._form_url(ticker_or_cik, filing_type)
         return self._download_filings(filing_url, filing_type, ticker_or_cik, num_filings_to_download)
 
+    def _get_new_proxy(self):
+        return self._proxyFactory.get_new_proxies_dict() if self._proxyFactory is not None else None
     '''
     Generic download methods
     '''
