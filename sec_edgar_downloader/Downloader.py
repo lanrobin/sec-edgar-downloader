@@ -5,7 +5,9 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 import requests
 import time
-import zipfile
+import gzip
+import shutil
+import os
 
 FilingInfo = namedtuple("FilingInfo", ["filename", "url"])
 
@@ -88,6 +90,11 @@ class Downloader:
                         for chunk in resp.iter_content(chunk_size=1024):
                             if chunk:  # filter out keep-alive chunks
                                 f.write(chunk)
+                    # to save disk space. we will zip the file.
+                    with open(save_path, 'rb') as f_in:
+                        with gzip.open(f'{save_path}.gz', 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                    os.remove(save_path)
 
                 print(f"{filing_type} filings for {ticker} downloaded successfully.")
                 return num_filings_to_download
