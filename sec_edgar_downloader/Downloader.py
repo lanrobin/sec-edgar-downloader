@@ -4,6 +4,8 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 import requests
+import time
+import zipfile
 
 FilingInfo = namedtuple("FilingInfo", ["filename", "url"])
 
@@ -35,8 +37,12 @@ class Downloader:
         return f"{self._base_url}&CIK={ticker}&type={filing_type.replace(' ', '+')}&dateb={before_date}"
 
     def _download_filings(self, edgar_search_url, filing_type, ticker, num_filings_to_download):
-        retry_times = 0
-        while(retry_times < 3 and (self._proxies is not None)):
+
+        while(True):
+            if(self._proxies is None):
+                print(f"No proxy found, we sleep for a while")
+                time.sleep(600)
+                self._get_new_proxy()
             try:
                 resp = requests.get(edgar_search_url, proxies = self._proxies)
                 resp.raise_for_status()
@@ -87,14 +93,11 @@ class Downloader:
                 return num_filings_to_download
             except requests.HTTPError as e:
                 if(e.response.status_code == 429):
-                    print(f" retry {retry_times} times, Server blocked us since we visited to much, we try to get new proxy.")
+                    print(f"Server blocked us since we visited to much, we try to get new proxy.")
                     self._proxies = self._get_new_proxy()
-                    retry_times += 1
             except requests.ConnectionError as e:
-                 print(f"proxy disconnected. retry {retry_times} times, could not connect to proxy, we try to get new proxy.")
+                 print(f"Could not connect to proxy, we try to get new proxy.")
                  self._proxies = self._get_new_proxy()
-                 retry_times += 1
-        print(f"max {retry_times} retry failed.")
         return 0
 
     def _get_filing_wrapper(self, filing_type, ticker_or_cik, num_filings_to_download):

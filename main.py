@@ -3,11 +3,11 @@ from sec_edgar_downloader.FreeProxyFactory import FreeProxyFactory
 from joblib import Parallel, delayed
 import multiprocessing
 
-identifiers = ["MSFT", "APPL", "FB"]
-#with open("NASDAQ_20171018.txt", "r") as f:
-#    lines = f.readlines()
-#    for line in lines:
-#        identifiers.append(line.split(",", 1)[1])
+identifiers = []
+with open("symbols.txt", "r") as f:
+    lines = f.readlines()
+    for line in lines:
+        identifiers.append(line.split('\n')[0])
 
 
 num_cores = multiprocessing.cpu_count()
