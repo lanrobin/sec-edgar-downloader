@@ -3,7 +3,7 @@ from .IProxyFactory import IProxyFactory
 
 class FreeProxyFactory(IProxyFactory):
     def __init__(self):
-        self._proxies =["http://104.216.26.189:5606", "http://66.172.114.113:44989"]
+        self._proxies =["http://3.213.222.172:8080", "http://167.99.155.123:80"]
         self._index = 0
     def get_new_proxies_dict(self):
         if(self._index < len(self._proxies)):

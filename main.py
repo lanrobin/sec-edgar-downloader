@@ -24,4 +24,6 @@ def downloadSymbol(symbol, dl):
 
 
 for s in identifiers:
-    downloadSymbol(s, dl)
+    if downloadSymbol(s, dl) == 0:
+        print(f"download:{s} failed.")
+        break
