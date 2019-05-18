@@ -3,6 +3,7 @@ from sec_edgar_downloader.FreeProxyFactory import FreeProxyFactory
 from joblib import Parallel, delayed
 import multiprocessing
 
+#identifiers = ['JD', 'BIDU']
 identifiers = []
 with open("symbols.txt", "r") as f:
     lines = f.readlines()

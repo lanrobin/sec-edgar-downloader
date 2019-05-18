@@ -151,19 +151,28 @@ class Downloader:
         filing_type = "SD"
         return self._get_filing_wrapper(filing_type, ticker_or_cik, num_filings_to_download)
 
+    def get_20f_filings(self, ticker_or_cik, num_filings_to_download=100):
+        filing_type = "20-F"
+        return self._get_filing_wrapper(filing_type, ticker_or_cik, num_filings_to_download)
+
+    def get_6k_filings(self, ticker_or_cik, num_filings_to_download=100):
+        filing_type = "6-K"
+        return self._get_filing_wrapper(filing_type, ticker_or_cik, num_filings_to_download)
     '''
     Bulk download methods
     '''
 
     def get_all_available_filings(self, ticker_or_cik, num_filings_to_download=100):
         total_dl = 0
-        total_dl += self.get_8k_filings(ticker_or_cik, num_filings_to_download)
+        '''total_dl += self.get_8k_filings(ticker_or_cik, num_filings_to_download)
         total_dl += self.get_10k_filings(ticker_or_cik, num_filings_to_download)
         total_dl += self.get_10q_filings(ticker_or_cik, num_filings_to_download)
         total_dl += self.get_13f_nt_filings(ticker_or_cik, num_filings_to_download)
         total_dl += self.get_13f_hr_filings(ticker_or_cik, num_filings_to_download)
         total_dl += self.get_sc_13g_filings(ticker_or_cik, num_filings_to_download)
-        total_dl += self.get_sd_filings(ticker_or_cik, num_filings_to_download)
+        total_dl += self.get_sd_filings(ticker_or_cik, num_filings_to_download)'''
+        total_dl += self.get_20f_filings(ticker_or_cik, num_filings_to_download)
+        total_dl += self.get_6k_filings(ticker_or_cik, num_filings_to_download)
         return total_dl
 
 
